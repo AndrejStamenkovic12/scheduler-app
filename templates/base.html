@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Appointment Scheduler{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+    <style>
+        /* Custom animations for Find Near You icon */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+        
+        /* Enhanced hover effect for Find Near You card */
+        .hover-card:hover .service-icon i.fa-map-marker-alt {
+            animation: pulse 1s infinite;
+        }
+        
+        .hover-card:hover .service-icon i.fa-crosshairs {
+            animation: rotate 1s linear infinite;
+        }
+        
+        .hover-card:hover .service-icon div {
+            animation: blink 0.8s infinite;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-calendar-check me-2"></i>
+                <span data-translate="appointment-scheduler">Appointment Scheduler</span>
+            </a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto me-3">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}">
+                            <i class="fas fa-home me-1"></i><span data-translate="home">Home</span>
+                        </a>
+                    </li>
+                    {% if current_user %}
+                        {% if current_user.role == 'provider' %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('provider_appointments') }}">
+                                    <i class="fas fa-calendar-check me-1"></i><span data-translate="appointments">Appointments</span>
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('history') }}">
+                                    <i class="fas fa-history me-1"></i><span data-translate="history">History</span>
+                                </a>
+                            </li>
+                        {% endif %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('reviews') }}">
+                                <i class="fas fa-star me-1"></i><span data-translate="reviews">Reviews</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('help') }}">
+                            <i class="fas fa-question-circle me-1"></i><span data-translate="help">Help</span>
+                        </a>
+                    </li>
+                </ul>
+                
+                <div class="d-flex align-items-center gap-2">
+                    {% if current_user %}
+                        <div class="dropdown">
+                            <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                {% if current_user.role == 'provider' %}
+                                    <i class="fas fa-store me-1"></i>{{ current_user.business_name or current_user.username }}
+                                {% else %}
+                                <i class="fas fa-user me-1"></i>{{ current_user.name or current_user.username }}
+                                {% endif %}
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end glass-effect">
+                                <li><a class="dropdown-item" href="{{ url_for('profile') }}">
+                                    <i class="fas fa-user-circle me-2"></i><span data-translate="profile">Profile</span>
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('logout') }}">
+                                    <i class="fas fa-sign-out-alt me-2"></i><span data-translate="logout">Logout</span>
+                                </a></li>
+                            </ul>
+                        </div>
+                    {% else %}
+                        <a href="{{ url_for('login') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-sign-in-alt me-1"></i><span data-translate="login">Login</span>
+                        </a>
+                        <a href="{{ url_for('register') }}" class="btn btn-primary">
+                            <i class="fas fa-user-plus me-1"></i><span data-translate="register">Register</span>
+                        </a>
+                    {% endif %}
+                    
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" title="Select Language">
+                            <i class="fas fa-globe me-1"></i>
+                            <span id="current-language">EN</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end glass-effect">
+                            <li><a class="dropdown-item language-option" href="#" data-lang="en">
+                                English
+                            </a></li>
+                            <li><a class="dropdown-item language-option" href="#" data-lang="sr">
+                                Srpski (RS)
+                            </a></li>
+                        </ul>
+                    </div>
+                    
+                    <button class="btn theme-toggle" onclick="toggleTheme()" title="Toggle Dark Mode">
+                        <i class="fas fa-moon" id="theme-icon"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container my-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer-custom text-center py-3 mt-5">
+        <div class="container">
+            <p class="footer-text mb-0"><span data-translate="built-with">Built with Flask & Bootstrap.</span></p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    
+    <script>
+        // Theme Toggle Functionality
+        function toggleTheme() {
+            const body = document.body;
+            const themeIcon = document.getElementById('theme-icon');
+            const currentTheme = body.getAttribute('data-theme');
+            
+            if (currentTheme === 'dark') {
+                body.setAttribute('data-theme', 'light');
+                themeIcon.className = 'fas fa-moon';
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeIcon.className = 'fas fa-sun';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+        
+        // Translation data
+        const translations = {
+            'en': {
+                'appointment-scheduler': 'Appointment Scheduler',
+                'home': 'Home',
+                'history': 'History',
+                'help': 'Help',
+                'profile': 'Profile',
+                'logout': 'Logout',
+                'login': 'Login',
+                'register': 'Register',
+                'built-with': 'Built with Flask & Bootstrap.',
+                'welcome': 'Welcome to Appointment Scheduler',
+                'welcome-subtitle': 'Book your appointments with ease',
+                'upcoming-appointments': 'Upcoming Appointments',
+                'no-appointments': 'No upcoming appointments',
+                'schedule-appointment': 'Schedule Appointment',
+                'view-all-appointments': 'View All Appointments',
+                'services': 'Services',
+                'about': 'About',
+                'contact': 'Contact',
+                'book-now': 'Book Now',
+                'learn-more': 'Learn More',
+                'get-started': 'Get Started',
+                'appointment-type': 'Appointment Type',
+                'date': 'Date',
+                'time': 'Time',
+                'duration': 'Duration',
+                'notes': 'Notes',
+                'submit': 'Submit',
+                'cancel': 'Cancel',
+                'edit': 'Edit',
+                'delete': 'Delete',
+                'save': 'Save',
+                'back': 'Back',
+                'next': 'Next',
+                'previous': 'Previous',
+                'loading': 'Loading...',
+                'error': 'Error',
+                'success': 'Success',
+                'warning': 'Warning',
+                'info': 'Info',
+                'confirm': 'Confirm',
+                'yes': 'Yes',
+                'no': 'No',
+                'close': 'Close',
+                'search': 'Search',
+                'filter': 'Filter',
+                'sort': 'Sort',
+                'refresh': 'Refresh',
+                'print': 'Print',
+                'download': 'Download',
+                'upload': 'Upload',
+                'view': 'View',
+                'details': 'Details',
+                'status': 'Status',
+                'pending': 'Pending',
+                'confirmed': 'Confirmed',
+                'completed': 'Completed',
+                'cancelled': 'Cancelled',
+                'declined': 'Declined',
+                'manage-business': 'Manage Business',
+                'my-appointments': 'My Appointments',
+                'services-description': 'Discover our premium beauty, wellness, and fitness services',
+                'explore-services': 'Explore Services',
+                'help-support': 'Help & Support',
+                'help-description': 'Get instant help with our AI assistant and FAQ',
+                'get-support': 'Get Support',
+                'profile-description': 'Manage your preferences and account settings',
+                'view-profile': 'View Profile',
+                'history-description': 'Track your appointment history and past orders',
+                'view-history': 'View History',
+                'view-all': 'View All',
+                'ready-to-start': 'Ready to get started?',
+                'schedule-first-appointment': 'Schedule your first appointment and begin your wellness journey today!',
+                'schedule-first-appointment-btn': 'Schedule Your First Appointment',
+                'welcome': 'Welcome!',
+                'create-account-message': 'Create an account to start booking appointments.',
+                'create-account': 'Create Account',
+                'appointment-history-orders': 'Appointment History & Orders',
+                'all': 'All',
+                'upcoming': 'Upcoming',
+                'service': 'Service',
+                'date-time': 'Date & Time',
+                'booked-on': 'Booked On',
+                'actions': 'Actions',
+                'no-notes': 'No notes',
+                'total-appointments': 'Total Appointments:',
+                'no-appointment-history': 'No appointment history',
+                'history-will-appear': 'Your appointment history will appear here once you start booking services.',
+                'cancel-appointment': 'Cancel Appointment',
+                'cancel-confirmation': 'Are you sure you want to cancel this appointment? This action cannot be undone.',
+                'no-keep-it': 'No, Keep It',
+                'yes-cancel-it': 'Yes, Cancel It',
+                'rebook-service': 'Rebook Service',
+                'rebook-question': 'Would you like to schedule the same service again?',
+                'rebook-info': 'This will take you to the scheduling page with the service type pre-selected.',
+                'yes-rebook': 'Yes, Rebook',
+                'get-help-quickly': 'Get Help Quickly',
+                'other-ways-to-reach-us': 'Other Ways to Reach Us',
+                'business-hours': 'Mon-Fri: 9AM-6PM EST',
+                'live-chat-support': 'Live Chat Support',
+                'online': 'Online',
+                'average-response': 'Average response: 2 minutes',
+                'start-chat': 'Start Chat',
+                'frequently-asked-questions': 'Frequently Asked Questions',
+                'support-bot': 'Support Bot',
+                'now': 'now',
+                'bot-welcome-message': 'Hello! I\'m here to help you. What can I assist you with today?',
+                'type-message-here': 'Type your message here...',
+                'submit-support-request': 'Submit Support Request',
+                'support-topic': 'Support Topic',
+                'select-topic': 'Select a topic...',
+                'request-refund': 'Request Refund',
+                'reschedule-appointment': 'Reschedule Appointment',
+                'technical-issue': 'Technical Issue',
+                'billing-question': 'Billing Question',
+                'general-inquiry': 'General Inquiry',
+                'appointment-id': 'Appointment ID (if applicable)',
+                'appointment-id-example': 'e.g., #123',
+                'describe-issue': 'Describe your issue',
+                'provide-detail': 'Please provide as much detail as possible...',
+                'email-followup': 'Email for follow-up',
+                'email-example': 'your.email@example.com',
+                'submit-request': 'Submit Request',
+                'general': 'General',
+                'refunds-and-cancellations': 'Refunds & Cancellations',
+                'technical-support': 'Technical Support',
+                'refund': 'Request Refund',
+                'reschedule': 'Reschedule Appointment',
+                'technical': 'Technical Issue',
+                'billing': 'Billing Question',
+                'faq-q-0': 'How do I schedule an appointment?',
+                'faq-a-0': 'Click on "Schedule Appointment" in the navigation menu or on the home page. Fill out the form with your preferred service, date, time, and duration.',
+                'faq-q-1': 'What services do you offer?',
+                'faq-a-1': 'We offer a wide range of beauty, wellness, and fitness services including hair salon, nail care, massage therapy, personal training, spa treatments, and more. Browse our Services page to see all available options.',
+                'faq-q-2': 'How far in advance can I book?',
+                'faq-a-2': 'You can book appointments up to 3 months in advance. We recommend booking at least 24 hours ahead for the best availability.',
+                'faq-q-3': 'Do I need to create an account?',
+                'faq-a-3': 'Yes, creating a free account allows you to manage your appointments, view your history, and receive appointment reminders. Registration takes less than 2 minutes.',
+                'faq-q-4': 'What is your cancellation policy?',
+                'faq-a-4': 'You can cancel appointments up to 24 hours in advance for a full refund. Cancellations within 24 hours may be subject to a 50% cancellation fee.',
+                'faq-q-5': 'How do I cancel my appointment?',
+                'faq-a-5': 'Go to your "All Appointments" or "History" page and click the trash icon next to the appointment you want to cancel. You can also contact our support team for assistance.',
+                'faq-q-6': 'What if I need to reschedule?',
+                'faq-a-6': 'You can reschedule by canceling your current appointment and booking a new one, or contact our support team who can help you find alternative times.',
+                'faq-q-7': 'How long does it take to process refunds?',
+                'faq-a-7': 'Refunds are typically processed within 3-5 business days and will appear on your original payment method. You\'ll receive an email confirmation once processed.',
+                'faq-q-8': 'I forgot my password. How do I reset it?',
+                'faq-a-8': 'Click "Forgot Password" on the login page or contact support. We\'ll send you a secure reset link to your registered email address within 5 minutes.',
+                'faq-q-9': 'The website is not loading properly. What should I do?',
+                'faq-a-9': 'Try refreshing the page, clearing your browser cache, or using a different browser. If the problem persists, contact our technical support team through the chat below.',
+                'faq-q-10': 'Can I use the app on my mobile device?',
+                'faq-a-10': 'Yes! Our website is fully responsive and works great on mobile phones and tablets. No app download required - just visit our website in your mobile browser.',
+                'faq-q-11': 'I\'m having trouble with the booking form. What should I do?',
+                'faq-a-11': 'Make sure you have JavaScript enabled and try using a different browser. If the issue continues, contact our technical support team who can help you complete your booking.',
+                'member-since': 'Member since',
+                'edit-profile': 'Edit Profile',
+                'business-name': 'Business Name',
+                'service-category': 'Service Category',
+                'select-service-category': 'Select service category...',
+                'hair-beauty': 'Hair & Beauty',
+                'hair-salon': 'Hair Salon',
+                'nail-salon': 'Nail Salon',
+                'eyebrow-eyelash': 'Eyebrow & Eyelash',
+                'wellness-spa': 'Wellness & Spa',
+                'massage-therapy': 'Massage Therapy',
+                'spa-treatment': 'Spa Treatment',
+                'aromatherapy': 'Aromatherapy',
+                'fitness-training': 'Fitness & Training',
+                'personal-training': 'Personal Training',
+                'yoga-classes': 'Yoga Classes',
+                'pilates': 'Pilates',
+                'health-medical': 'Health & Medical',
+                'dermatology': 'Dermatology',
+                'physical-therapy': 'Physical Therapy',
+                'nutrition-counseling': 'Nutrition Counseling',
+                'specialty-services': 'Specialty Services',
+                'makeup-artist': 'Makeup Artist',
+                'photography': 'Photography',
+                'life-coaching': 'Life Coaching',
+                'other': 'Other',
+                'service-provider': 'Service Provider',
+                'service-category-help': 'This determines which provider page your business appears on',
+                'business-description': 'Business Description',
+                'services-offered': 'Services Offered',
+                'services-example': 'e.g., Haircuts, Coloring, Styling',
+                'business-address': 'Business Address',
+                'address-example': '123 Main St, City, State',
+                'full-name': 'Full Name',
+                'email-address': 'Email Address',
+                'email-example': 'your@email.com',
+                'phone-number': 'Phone Number',
+                'phone-example': '+1 (555) 123-4567',
+                'profile-picture': 'Profile Picture',
+                'image-format-help': 'JPG, PNG or GIF (Max 5MB)',
+                'preview': 'Preview:',
+                'save-changes': 'Save Changes',
+                'delete-account': 'Delete Account',
+                'quick-actions': 'Quick Actions',
+                'view-my-appointments': 'View My Appointments',
+                'appointment-history': 'Appointment History',
+                'browse-services': 'Browse Services',
+                'warning': 'Warning:',
+                'action-cannot-be-undone': 'This action cannot be undone!',
+                'delete-account-confirmation': 'Are you sure you want to delete your account? This will permanently remove:',
+                'profile-information': 'Your profile information',
+                'all-appointments': 'All your appointments',
+                'business-listing': 'Your business listing',
+                'type-delete-to-confirm': 'Type "DELETE" to confirm:',
+                'type-delete-confirm': 'Type DELETE to confirm',
+                'delete-my-account': 'Delete My Account',
+                'our-services': 'Our Services',
+                'services-hero-description': 'Discover a wide range of professional services from trusted providers. Book appointments for hair, beauty, wellness, fitness, and more.',
+                'search-services-providers': 'Search services or providers...',
+                'all-categories': 'All Categories',
+                'all-price-ranges': 'All Price Ranges',
+                'under-50': 'Under $50',
+                'price-50-100': '$50 - $100',
+                'price-100-200': '$100 - $200',
+                'price-200-plus': '$200+',
+                'popular': 'Popular',
+                'duration': 'Duration:',
+                'price': 'Price:',
+                'providers': 'Providers:',
+                'available': 'available',
+                'view-providers': 'View Providers',
+                'no-services-found': 'No services found',
+                'adjust-search-criteria': 'Try adjusting your search criteria or browse all categories.',
+                'clear-filters': 'Clear Filters',
+                'available-providers': 'Available Providers',
+                'book': 'Book',
+                'booking-redirect-message': 'This will redirect you to the appointment scheduling page with the service pre-selected.',
+                'booking-next-page-info': 'You\'ll be able to choose your preferred provider and time slot on the next page.',
+                'continue-to-booking': 'Continue to Booking',
+                'service-hair-salon': 'Hair Salon',
+                'service-nail-salon': 'Nail Salon',
+                'service-eyebrow-and-eyelash': 'Eyebrow & Eyelash',
+                'service-massage-therapy': 'Massage Therapy',
+                'service-spa-treatment': 'Spa Treatment',
+                'service-aromatherapy': 'Aromatherapy',
+                'service-personal-training': 'Personal Training',
+                'service-yoga-classes': 'Yoga Classes',
+                'service-pilates': 'Pilates',
+                'service-dermatology': 'Dermatology',
+                'service-physical-therapy': 'Physical Therapy',
+                'service-nutrition-counseling': 'Nutrition Counseling',
+                'service-makeup-artist': 'Makeup Artist',
+                'service-photography': 'Photography',
+                'service-life-coaching': 'Life Coaching',
+                'login': 'Login',
+                'sign-in-to-manage-appointments': 'Sign in to manage your appointments',
+                'username': 'Username',
+                'enter-your-username': 'Enter your username',
+                'password': 'Password',
+                'enter-your-password': 'Enter your password',
+                'dont-have-account': 'Don\'t have an account?',
+                'create-one-now': 'Create one now',
+                'create-account': 'Create Account',
+                'join-as-customer-or-provider': 'Join us as a customer or service provider',
+                'i-am-a': 'I am a:',
+                'customer': 'Customer',
+                'book-appointments': 'Book appointments',
+                'provider': 'Provider',
+                'offer-services': 'Offer services',
+                'choose-username': 'Choose a username',
+                'full-name': 'Full Name',
+                'enter-full-name': 'Enter your full name',
+                'email-placeholder': 'your@email.com',
+                'phone-number': 'Phone Number',
+                'phone-placeholder': '+1 (555) 123-4567',
+                'business-name': 'Business Name',
+                'your-business-name': 'Your business name',
+                'service-type': 'Service Type',
+                'select-service-type': 'Select service type...',
+                'hair-beauty': 'Hair & Beauty',
+                'wellness-spa': 'Wellness & Spa',
+                'fitness-training': 'Fitness & Training',
+                'health-medical': 'Health & Medical',
+                'specialty-services': 'Specialty Services',
+                'other': 'Other',
+                'specific-services': 'Specific Services',
+                'hair-beauty-services': 'Hair & Beauty Services:',
+                'wellness-spa-services': 'Wellness & Spa Services:',
+                'fitness-training-services': 'Fitness & Training Services:',
+                'health-medical-services': 'Health & Medical Services:',
+                'business-description': 'Business Description',
+                'describe-business': 'Describe your business and what makes it special',
+                'business-address': 'Business Address',
+                'address-placeholder': '123 Main St, City, State',
+                'create-password': 'Create a password',
+                'at-least-4-characters': 'At least 4 characters',
+                'confirm-password': 'Confirm Password',
+                'confirm-your-password': 'Confirm your password',
+                'already-have-account': 'Already have an account?',
+                'sign-in-here': 'Sign in here',
+                'hair-salon-providers': 'Hair Salon Providers',
+                'hair-salon-description': 'Professional hair styling, coloring, and beauty treatments',
+                'search-providers-name-services': 'Search providers by name or services...',
+                'clear-search': 'Clear Search',
+                'reviews': 'Reviews',
+                'no-reviews-yet': 'No reviews yet',
+                'average-rating': 'Average Rating',
+                'total-reviews-received': 'Total Reviews Received',
+                'reviews-received': 'Reviews Received',
+                'no-reviews-received-yet': 'No reviews received yet',
+                'reviews-will-appear-here': 'Reviews from customers will appear here once they rate your services.',
+                'reviews-written': 'Reviews Written',
+                'review-for': 'Review for',
+                'no-reviews-written-yet': 'No reviews written yet',
+                'your-reviews-will-appear-here': 'Your reviews for completed appointments will appear here.',
+                'back-to-profile': 'Back to Profile',
+                'view-history': 'View History',
+                'services': 'Services:',
+                'book-appointment': 'Book Appointment',
+                'login-to-book': 'Login to Book',
+                'schedule-new-appointment': 'Schedule New Appointment',
+                'date': 'Date',
+                'time': 'Time',
+                'provider-working-hours': 'Provider Working Hours',
+                'notes-optional': 'Notes (Optional)',
+                'add-special-notes': 'Add any special notes or requirements...',
+                'no-provider-selected': 'No Provider Selected',
+                'schedule-appointment-message': 'To schedule an appointment, please first browse our services and select a provider.',
+                'browse-services-providers': 'Browse Services & Providers',
+                'schedule-appointment': 'Schedule Appointment',
+                'tips-for-scheduling': 'Tips for Scheduling',
+                'booking': 'Booking',
+                'appointments-60-minutes': 'All appointments are scheduled for 60 minutes by default',
+                'provider-selection': 'Provider Selection',
+                'choose-provider-availability': 'Choose a specific provider to see their availability',
+                'time-slots': 'Time Slots',
+                'select-date-time-hours': 'Select a date and time within provider working hours',
+                'confirmation': 'Confirmation',
+                'provider-confirm-request': 'Provider will confirm your appointment request',
+                'pending-appointment-requests': 'Pending Appointment Requests',
+                'pending-requests-message': 'You have pending appointment requests that need your attention.',
+                'view-pending': 'View Pending',
+                'business-settings': 'Business Settings',
+                'manage-availability': 'Manage Availability',
+                'edit-business-info': 'Edit Business Info',
+                'business-analytics': 'Business Analytics',
+                'total-bookings': 'Total Bookings',
+                'completed-bookings': 'Completed',
+                'start-time': 'Start',
+                'end-time': 'End',
+                'save-availability': 'Save Availability',
+                'monday': 'Monday',
+                'tuesday': 'Tuesday',
+                'wednesday': 'Wednesday',
+                'thursday': 'Thursday',
+                'friday': 'Friday',
+                'saturday': 'Saturday',
+                'sunday': 'Sunday',
+                'call': 'Call',
+                'email': 'Email',
+                'no-hair-salon-providers-yet': 'No Hair Salon Providers Yet',
+                'no-hair-salon-providers-description': 'There are currently no hair salon providers registered on our platform.',
+                'update-business-category-hair-beauty': 'Update your business category to "Hair & Beauty" to appear here.',
+                'update-business-info': 'Update Business Info',
+                'are-you-hair-salon-owner': 'Are you a hair salon owner? Register your business today!',
+                'register-as-provider': 'Register as Provider',
+                'no-providers-found': 'No providers found',
+                'try-adjusting-search-criteria': 'Try adjusting your search criteria',
+                'back-to-all-services': 'Back to All Services',
+                'no-providers-yet': 'No Providers Yet',
+                'no-providers-description': 'There are currently no providers registered on our platform.',
+                'update-business-category': 'Update your business category to appear here.',
+                'register-your-business': 'Register your business today!',
+                'nail-salon-providers': 'Nail Salon Providers',
+                'nail-salon-description': 'Manicures, pedicures, nail art, and nail care',
+                'search-nail-salon-providers': 'Search nail salon providers...',
+                'clear': 'Clear',
+                'back-to-services': 'Back to Services',
+                'eyebrow-providers': 'Eyebrow & Eyelash Providers',
+                'eyebrow-description': 'Eyebrow shaping, lash extensions, and tinting',
+                'search-eyebrow-providers': 'Search providers by name or services...',
+                'no-eyebrow-providers-yet': 'No Eyebrow & Eyelash Providers Yet',
+                'no-eyebrow-providers-description': 'There are currently no eyebrow & eyelash providers registered on our platform.',
+                'update-service-type-eyebrow': 'Update your service type to "Eyebrow & Eyelash" to appear here.',
+                'are-you-eyebrow-specialist': 'Are you an eyebrow & eyelash specialist? Register your business today!',
+                'massage-therapy-providers': 'Massage Therapy Providers',
+                'massage-therapy-description': 'Swedish, deep tissue, hot stone, and therapeutic massage',
+                'search-massage-providers': 'Search massage providers...',
+                'spa-treatment-providers': 'Spa Treatment Providers',
+                'spa-treatment-description': 'Facials, body wraps, scrubs, and luxury spa services',
+                'search-spa-providers': 'Search spa providers...',
+                'aromatherapy-providers': 'Aromatherapy Providers',
+                'aromatherapy-description': 'Essential oil treatments and aromatherapy sessions',
+                'search-aromatherapy-providers': 'Search providers by name or services...',
+                'personal-training-providers': 'Personal Training Providers',
+                'personal-training-description': 'One-on-one fitness training and workout sessions',
+                'search-training-providers': 'Search personal trainers...',
+                'yoga-classes-providers': 'Yoga Classes Providers',
+                'yoga-classes-description': 'Group and private yoga sessions for all levels',
+                'search-yoga-providers': 'Search yoga instructors...',
+                'pilates-providers': 'Pilates Providers',
+                'pilates-description': 'Pilates classes and private sessions',
+                'search-pilates-providers': 'Search providers by name or services...',
+                'dermatology-providers': 'Dermatology Providers',
+                'dermatology-description': 'Skin consultations, treatments, and cosmetic procedures',
+                'search-dermatology-providers': 'Search providers by name or services...',
+                'physical-therapy-providers': 'Physical Therapy Providers',
+                'physical-therapy-description': 'Rehabilitation, injury recovery, and mobility improvement',
+                'search-physical-therapy-providers': 'Search providers by name or services...',
+                'nutrition-providers': 'Nutrition Counseling Providers',
+                'nutrition-description': 'Diet planning, nutritional guidance, and wellness coaching',
+                'search-nutrition-providers': 'Search providers by name or services...',
+                'makeup-providers': 'Makeup Artist Providers',
+                'makeup-description': 'Professional makeup application for special events',
+                'search-makeup-providers': 'Search providers by name or services...',
+                'photography-providers': 'Photography Providers',
+                'photography-description': 'Portrait, event, and lifestyle photography sessions',
+                'search-photography-providers': 'Search providers by name or services...',
+                'lifecoaching-providers': 'Life Coaching Providers',
+                'lifecoaching-description': 'Personal development and life guidance sessions',
+                'search-lifecoaching-providers': 'Search providers by name or services...',
+                'find-near-you': 'Find Near You',
+                'find-near-you-description': 'Discover providers in your local area',
+                'serbia-map': 'Serbia Map',
+                'find-providers': 'Find Providers',
+                'world-map': 'World Map'
+            },
+            'sr': {
+                'appointment-scheduler': 'Sistem Zakazivanja Termina',
+                'home': 'Početna',
+                'history': 'Istorija',
+                'help': 'Pomoć',
+                'profile': 'Profil',
+                'logout': 'Odjavi se',
+                'login': 'Prijavi se',
+                'register': 'Registruj se',
+                'built-with': 'Napravljeno sa Flask & Bootstrap.',
+                'welcome': 'Dobrodošli u Sistem Zakazivanja Termina',
+                'welcome-subtitle': 'Zakazujte svoje termine sa lakoćom',
+                'upcoming-appointments': 'Predstojeći Termini',
+                'no-appointments': 'Nema predstojećih termina',
+                'schedule-appointment': 'Zakazivanje Termina',
+                'view-all-appointments': 'Prikaži Sve Termine',
+                'services': 'Usluge',
+                'about': 'O nama',
+                'contact': 'Kontakt',
+                'book-now': 'Zakazivanje',
+                'learn-more': 'Saznajte više',
+                'get-started': 'Počnite',
+                'appointment-type': 'Tip Termina',
+                'date': 'Datum',
+                'time': 'Vreme',
+                'duration': 'Trajanje',
+                'notes': 'Napomene',
+                'submit': 'Pošalji',
+                'cancel': 'Otkaži',
+                'edit': 'Izmeni',
+                'delete': 'Obriši',
+                'save': 'Sačuvaj',
+                'back': 'Nazad',
+                'next': 'Sledeće',
+                'previous': 'Prethodno',
+                'loading': 'Učitavanje...',
+                'error': 'Greška',
+                'success': 'Uspeh',
+                'warning': 'Upozorenje',
+                'info': 'Informacija',
+                'confirm': 'Potvrdi',
+                'yes': 'Da',
+                'no': 'Ne',
+                'close': 'Zatvori',
+                'search': 'Pretraži',
+                'filter': 'Filtriraj',
+                'sort': 'Sortiraj',
+                'refresh': 'Osveži',
+                'print': 'Štampaj',
+                'download': 'Preuzmi',
+                'upload': 'Otpremi',
+                'view': 'Prikaži',
+                'details': 'Detalji',
+                'status': 'Status',
+                'pending': 'Na čekanju',
+                'confirmed': 'Potvrđeno',
+                'completed': 'Završeno',
+                'cancelled': 'Otkazano',
+                'declined': 'Odbijeno',
+                'manage-business': 'Upravljanje Poslom',
+                'my-appointments': 'Moji Termini',
+                'services-description': 'Otkrijte naše premium usluge lepote, wellness-a i fitness-a',
+                'explore-services': 'Istražite Usluge',
+                'help-support': 'Pomoć i Podrška',
+                'help-description': 'Dobijte trenutnu pomoć sa našim AI asistentom i FAQ',
+                'get-support': 'Dobijte Podršku',
+                'profile-description': 'Upravljajte svojim preferencijama i postavkama naloga',
+                'view-profile': 'Prikaži Profil',
+                'history-description': 'Pratite istoriju svojih termina i prošlih narudžbina',
+                'view-history': 'Prikaži Istoriju',
+                'view-all': 'Prikaži Sve',
+                'ready-to-start': 'Spremni da počnete?',
+                'schedule-first-appointment': 'Zakazujte svoj prvi termin i počnite svoju wellness putanju danas!',
+                'schedule-first-appointment-btn': 'Zakazivanje Prvog Termina',
+                'welcome': 'Dobrodošli!',
+                'create-account-message': 'Kreirajte nalog da biste počeli sa zakazivanjem termina.',
+                'create-account': 'Kreiraj Nalog',
+                'appointment-history-orders': 'Istorija Termina i Narudžbina',
+                'all': 'Sve',
+                'upcoming': 'Predstojeći',
+                'service': 'Usluga',
+                'date-time': 'Datum i Vreme',
+                'booked-on': 'Zakazano',
+                'actions': 'Akcije',
+                'no-notes': 'Bez napomena',
+                'total-appointments': 'Ukupno Termina:',
+                'no-appointment-history': 'Nema istorije termina',
+                'history-will-appear': 'Vaša istorija termina će se pojaviti ovde kada počnete sa zakazivanjem usluga.',
+                'cancel-appointment': 'Otkaži Termin',
+                'cancel-confirmation': 'Da li ste sigurni da želite da otkažete ovaj termin? Ova akcija se ne može poništiti.',
+                'no-keep-it': 'Ne, Zadrži',
+                'yes-cancel-it': 'Da, Otkaži',
+                'rebook-service': 'Ponovo Zakazivanje Usluge',
+                'rebook-question': 'Da li želite da zakazujete istu uslugu ponovo?',
+                'rebook-info': 'Ovo će vas odvesti na stranicu za zakazivanje sa unapred odabranim tipom usluge.',
+                'yes-rebook': 'Da, Zakazivanje',
+                'get-help-quickly': 'Brza Pomoć',
+                'other-ways-to-reach-us': 'Drugi Načini da Nas Kontaktirate',
+                'business-hours': 'Pon-Pet: 9-18h EST',
+                'live-chat-support': 'Živa Podrška za Čet',
+                'online': 'Online',
+                'average-response': 'Prosečno vreme odgovora: 2 minuta',
+                'start-chat': 'Započni Čet',
+                'frequently-asked-questions': 'Često Postavljana Pitanja',
+                'support-bot': 'Bot za Podršku',
+                'now': 'sada',
+                'bot-welcome-message': 'Zdravo! Tu sam da vam pomognem. Kako vam mogu pomoći danas?',
+                'type-message-here': 'Ukucajte svoju poruku ovde...',
+                'submit-support-request': 'Pošalji Zahtev za Podršku',
+                'support-topic': 'Tema Podrške',
+                'select-topic': 'Izaberite temu...',
+                'request-refund': 'Zahtev za Povraćaj',
+                'reschedule-appointment': 'Prezakazivanje Termina',
+                'technical-issue': 'Tehnički Problem',
+                'billing-question': 'Pitanje o Naplati',
+                'general-inquiry': 'Opšte Pitanje',
+                'appointment-id': 'ID Termina (ako je primenljivo)',
+                'appointment-id-example': 'npr., #123',
+                'describe-issue': 'Opisite svoj problem',
+                'provide-detail': 'Molimo vas da pružite što više detalja...',
+                'email-followup': 'Email za praćenje',
+                'email-example': 'vas.email@example.com',
+                'submit-request': 'Pošalji Zahtev',
+                'general': 'Opšte',
+                'refunds-and-cancellations': 'Povraćaji i Otkazivanja',
+                'technical-support': 'Tehnička Podrška',
+                'refund': 'Zahtev za Povraćaj',
+                'reschedule': 'Promena zakazanog termina',
+                'technical': 'Tehnički Problem',
+                'billing': 'Pitanje o Naplati',
+                'faq-q-0': 'Kako da zakazujem termin?',
+                'faq-a-0': 'Kliknite na "Zakazivanje Termina" u navigacionom meniju ili na početnoj stranici. Popunite formular sa željenom uslugom, datumom, vremenom i trajanjem.',
+                'faq-q-1': 'Koje usluge nudite?',
+                'faq-a-1': 'Nudimo širok spektar usluga lepote, wellness-a i fitness-a uključujući frizerski salon, negu noktiju, masažu, lični trening, spa tretmane i još mnogo toga. Pogledajte našu stranicu Usluge da vidite sve dostupne opcije.',
+                'faq-q-2': 'Koliko unapred mogu da zakazujem?',
+                'faq-a-2': 'Možete zakazivati termine do 3 meseca unapred. Preporučujemo da zakazujete najmanje 24 sata unapred za najbolju dostupnost.',
+                'faq-q-3': 'Da li moram da kreiram nalog?',
+                'faq-a-3': 'Da, kreiranje besplatnog naloga vam omogućava da upravljate svojim terminima, pregledate istoriju i primate podsetnike o terminima. Registracija traje manje od 2 minuta.',
+                'faq-q-4': 'Kakva je vaša politika otkazivanja?',
+                'faq-a-4': 'Možete otkazati termine do 24 sata unapred za potpuni povraćaj. Otkazivanja u roku od 24 sata mogu biti naplaćena sa 50% naknadom za otkazivanje.',
+                'faq-q-5': 'Kako da otkažem svoj termin?',
+                'faq-a-5': 'Idite na svoju stranicu "Svi Termini" ili "Istorija" i kliknite na ikonu kante pored termina koji želite da otkažete. Takođe možete kontaktirati naš tim za podršku za pomoć.',
+                'faq-q-6': 'Šta ako trebam da prezakazujem?',
+                'faq-a-6': 'Možete prezakazati otkazivanjem trenutnog termina i zakazivanjem novog, ili kontaktirati naš tim za podršku koji vam može pomoći da pronađete alternativna vremena.',
+                'faq-q-7': 'Koliko dugo traje obrada povraćaja?',
+                'faq-a-7': 'Povraćaji se obično obrađuju u roku od 3-5 radnih dana i pojaviće se na vašem originalnom načinu plaćanja. Primićete email potvrdu kada se obradi.',
+                'faq-q-8': 'Zaboravio sam lozinku. Kako da je resetujem?',
+                'faq-a-8': 'Kliknite "Zaboravljena lozinka" na stranici za prijavu ili kontaktirajte podršku. Poslaćemo vam sigurnu vezu za resetovanje na vašu registriranu email adresu u roku od 5 minuta.',
+                'faq-q-9': 'Sajt se ne učitava pravilno. Šta da radim?',
+                'faq-a-9': 'Pokušajte da osvežite stranicu, obrišete keš pretraživača ili koristite drugi pretraživač. Ako se problem nastavi, kontaktirajte naš tim za tehničku podršku preko četa ispod.',
+                'faq-q-10': 'Mogu li da koristim aplikaciju na mobilnom uređaju?',
+                'faq-a-10': 'Da! Naš sajt je potpuno responzivan i odlično radi na mobilnim telefonima i tabletima. Nije potrebno preuzimanje aplikacije - samo posetite naš sajt u mobilnom pretraživaču.',
+                'faq-q-11': 'Imam problema sa formom za zakazivanje. Šta da radim?',
+                'faq-a-11': 'Uverite se da imate omogućen JavaScript i pokušajte sa drugim pretraživačem. Ako se problem nastavi, kontaktirajte naš tim za tehničku podršku koji vam može pomoći da završite zakazivanje.',
+                'member-since': 'Član od',
+                'edit-profile': 'Izmeni Profil',
+                'business-name': 'Naziv Posla',
+                'service-category': 'Kategorija Usluge',
+                'select-service-category': 'Izaberite kategoriju usluge...',
+                'hair-beauty': 'Frizura i Lepota',
+                'hair-salon': 'Frizerski Salon',
+                'nail-salon': 'Salon za Nokte',
+                'eyebrow-eyelash': 'Obrve i Trepavice',
+                'wellness-spa': 'Wellness i Spa',
+                'massage-therapy': 'Masaža',
+                'spa-treatment': 'Spa Tretman',
+                'aromatherapy': 'Aromaterapija',
+                'fitness-training': 'Fitness i Trening',
+                'personal-training': 'Lični Trening',
+                'yoga-classes': 'Joga Časovi',
+                'pilates': 'Pilates',
+                'health-medical': 'Zdravlje i Medicina',
+                'dermatology': 'Dermatologija',
+                'physical-therapy': 'Fizikalna Terapija',
+                'nutrition-counseling': 'Savetovanje o Ishrani',
+                'specialty-services': 'Specijalizovane Usluge',
+                'makeup-artist': 'Šminker',
+                'photography': 'Fotografija',
+                'life-coaching': 'Life Coaching',
+                'other': 'Ostalo',
+                'service-provider': 'Pružalac Usluga',
+                'service-category-help': 'Ovo određuje na kojoj stranici za pružaoca će se pojaviti vaš posao',
+                'business-description': 'Opis Posla',
+                'services-offered': 'Pružane Usluge',
+                'services-example': 'npr., Šišanje, Bojanje, Stajling',
+                'business-address': 'Adresa Posla',
+                'address-example': '123 Glavna ulica, Grad, Država',
+                'full-name': 'Puno Ime',
+                'email-address': 'Email Adresa',
+                'email-example': 'vas@email.com',
+                'phone-number': 'Broj Telefona',
+                'phone-example': '+381 (11) 123-4567',
+                'profile-picture': 'Profilna Slika',
+                'image-format-help': 'JPG, PNG ili GIF (Maks 5MB)',
+                'preview': 'Pregled:',
+                'save-changes': 'Sačuvaj Izmene',
+                'delete-account': 'Obriši Nalog',
+                'quick-actions': 'Brze Akcije',
+                'view-my-appointments': 'Prikaži Moje Termine',
+                'appointment-history': 'Istorija Termina',
+                'browse-services': 'Pregledaj Usluge',
+                'warning': 'Upozorenje:',
+                'action-cannot-be-undone': 'Ova akcija se ne može poništiti!',
+                'delete-account-confirmation': 'Da li ste sigurni da želite da obrišete svoj nalog? Ovo će trajno ukloniti:',
+                'profile-information': 'Vaše informacije o profilu',
+                'all-appointments': 'Sve vaše termine',
+                'business-listing': 'Vašu poslovnu listu',
+                'type-delete-to-confirm': 'Ukucajte "DELETE" da potvrdite:',
+                'type-delete-confirm': 'Ukucajte DELETE da potvrdite',
+                'delete-my-account': 'Obriši Moj Nalog',
+                'our-services': 'Naše Usluge',
+                'services-hero-description': 'Otkrijte širok spektar profesionalnih usluga od pouzdanih pružaoca. Zakazujte termine za frizuru, lepotu, wellness, fitness i još mnogo toga.',
+                'search-services-providers': 'Pretražite usluge ili pružaoce...',
+                'all-categories': 'Sve Kategorije',
+                'all-price-ranges': 'Svi Cenovni Rasponi',
+                'under-50': 'Ispod $50',
+                'price-50-100': '$50 - $100',
+                'price-100-200': '$100 - $200',
+                'price-200-plus': '$200+',
+                'popular': 'Popularno',
+                'duration': 'Trajanje:',
+                'price': 'Cena:',
+                'providers': 'Pružaoci:',
+                'available': 'dostupno',
+                'view-providers': 'Prikaži Pružaoce',
+                'no-services-found': 'Nisu pronađene usluge',
+                'adjust-search-criteria': 'Pokušajte da prilagodite kriterijume pretrage ili pregledajte sve kategorije.',
+                'clear-filters': 'Obriši Filtere',
+                'available-providers': 'Dostupni Pružaoci',
+                'book': 'Zakazivanje',
+                'booking-redirect-message': 'Ovo će vas preusmeriti na stranicu za zakazivanje termina sa unapred odabranom uslugom.',
+                'booking-next-page-info': 'Moći ćete da izaberete željenog pružaoca i vremenski slot na sledećoj stranici.',
+                'continue-to-booking': 'Nastavi sa Zakazivanjem',
+                'service-hair-salon': 'Frizerski Salon',
+                'service-nail-salon': 'Salon za Nokte',
+                'service-eyebrow-and-eyelash': 'Obrve i Trepavice',
+                'service-massage-therapy': 'Masaža',
+                'service-spa-treatment': 'Spa Tretman',
+                'service-aromatherapy': 'Aromaterapija',
+                'service-personal-training': 'Lični Trening',
+                'service-yoga-classes': 'Joga Časovi',
+                'service-pilates': 'Pilates',
+                'service-dermatology': 'Dermatologija',
+                'service-physical-therapy': 'Fizikalna Terapija',
+                'service-nutrition-counseling': 'Savetovanje o Ishrani',
+                'service-makeup-artist': 'Šminker',
+                'service-photography': 'Fotografija',
+                'service-life-coaching': 'Life Coaching',
+                'login': 'Prijavljivanje',
+                'sign-in-to-manage-appointments': 'Prijavite se da upravljate svojim terminima',
+                'username': 'Korisničko ime',
+                'enter-your-username': 'Unesite vaše korisničko ime',
+                'password': 'Lozinka',
+                'enter-your-password': 'Unesite vašu lozinku',
+                'dont-have-account': 'Nemate nalog?',
+                'create-one-now': 'Kreirajte ga sada',
+                'create-account': 'Kreiraj Nalog',
+                'join-as-customer-or-provider': 'Pridružite se kao kupac ili pružalac usluga',
+                'i-am-a': 'Ja sam:',
+                'customer': 'Kupac',
+                'book-appointments': 'Zakazujte termine',
+                'provider': 'Pružalac',
+                'offer-services': 'Pružajte usluge',
+                'choose-username': 'Izaberite korisničko ime',
+                'full-name': 'Puno Ime',
+                'enter-full-name': 'Unesite vaše puno ime',
+                'email-placeholder': 'vas@email.com',
+                'phone-number': 'Broj Telefona',
+                'phone-placeholder': '+1 (555) 123-4567',
+                'business-name': 'Ime Biznisa',
+                'your-business-name': 'Ime vašeg biznisa',
+                'service-type': 'Tip Usluge',
+                'select-service-type': 'Izaberite tip usluge...',
+                'hair-beauty': 'Frizura i Lepota',
+                'wellness-spa': 'Wellness i Spa',
+                'fitness-training': 'Fitness i Trening',
+                'health-medical': 'Zdravlje i Medicina',
+                'specialty-services': 'Specijalne Usluge',
+                'other': 'Ostalo',
+                'specific-services': 'Specifične Usluge',
+                'hair-beauty-services': 'Frizura i Lepota Usluge:',
+                'wellness-spa-services': 'Wellness i Spa Usluge:',
+                'fitness-training-services': 'Fitness i Trening Usluge:',
+                'health-medical-services': 'Zdravlje i Medicina Usluge:',
+                'business-description': 'Opis Biznisa',
+                'describe-business': 'Opisite vaš biznis i šta ga čini posebnim',
+                'business-address': 'Adresa Biznisa',
+                'address-placeholder': '123 Glavna ulica, Grad, Država',
+                'create-password': 'Kreirajte lozinku',
+                'at-least-4-characters': 'Najmanje 4 karaktera',
+                'confirm-password': 'Potvrdite Lozinku',
+                'confirm-your-password': 'Potvrdite vašu lozinku',
+                'already-have-account': 'Već imate nalog?',
+                'sign-in-here': 'Prijavite se ovde',
+                'hair-salon-providers': 'Frizerski Salon Pružaoci',
+                'hair-salon-description': 'Profesionalno friziranje, bojanje i tretmani lepote',
+                'search-providers-name-services': 'Pretražite pružaoce po imenu ili uslugama...',
+                'clear-search': 'Obriši Pretragu',
+                'reviews': 'Recenzije',
+                'no-reviews-yet': 'Još uvek nema recenzija',
+                'average-rating': 'Prosečna Ocena',
+                'total-reviews-received': 'Ukupno Primljenih Recenzija',
+                'reviews-received': 'Primljene Recenzije',
+                'no-reviews-received-yet': 'Još uvek nema primljenih recenzija',
+                'reviews-will-appear-here': 'Recenzije od klijenata će se pojaviti ovde kada ocene vaše usluge.',
+                'reviews-written': 'Napisane Recenzije',
+                'review-for': 'Recenzija za',
+                'no-reviews-written-yet': 'Još uvek niste napisali recenziju',
+                'your-reviews-will-appear-here': 'Vaše recenzije za završene termine će se pojaviti ovde.',
+                'back-to-profile': 'Nazad na Profil',
+                'view-history': 'Prikaži Istoriju',
+                'services': 'Usluge:',
+                'book-appointment': 'Zakazivanje Termina',
+                'login-to-book': 'Ulogujte se za Zakazivanje',
+                'schedule-new-appointment': 'Zakazivanje Novog Termina',
+                'date': 'Datum',
+                'time': 'Vreme',
+                'provider-working-hours': 'Radno Vreme Pružaoca',
+                'notes-optional': 'Napomene (Opciono)',
+                'add-special-notes': 'Dodajte bilo kakve posebne napomene ili zahteve...',
+                'no-provider-selected': 'Nije Izabran Pružalac',
+                'schedule-appointment-message': 'Da biste zakazali termin, molimo vas da prvo pregledate naše usluge i izaberete pružaoca.',
+                'browse-services-providers': 'Pregledajte Usluge i Pružaoce',
+                'schedule-appointment': 'Zakazivanje Termina',
+                'tips-for-scheduling': 'Saveti za Zakazivanje',
+                'booking': 'Zakazivanje',
+                'appointments-60-minutes': 'Svi termini se zakazuju na 60 minuta po defaultu',
+                'provider-selection': 'Izbor Pružaoca',
+                'choose-provider-availability': 'Izaberite konkretnog pružaoca da vidite njegovu dostupnost',
+                'time-slots': 'Vremenski Slotovi',
+                'select-date-time-hours': 'Izaberite datum i vreme u okviru radnog vremena pružaoca',
+                'confirmation': 'Potvrda',
+                'provider-confirm-request': 'Pružalac će potvrditi vaš zahtev za termin',
+                'pending-appointment-requests': 'Zahtevi za Termine na Čekanju',
+                'pending-requests-message': 'Imate zahteve za termine koji čekaju vašu pažnju.',
+                'view-pending': 'Pogledaj Na Čekanju',
+                'business-settings': 'Postavke Biznisa',
+                'manage-availability': 'Upravljaj Dostupnošću',
+                'edit-business-info': 'Uredi Informacije o Biznisu',
+                'business-analytics': 'Analitika Biznisa',
+                'total-bookings': 'Ukupno Rezervacija',
+                'completed-bookings': 'Završeno',
+                'start-time': 'Početak',
+                'end-time': 'Kraj',
+                'save-availability': 'Sačuvaj Dostupnost',
+                'monday': 'Ponedeljak',
+                'tuesday': 'Utorak',
+                'wednesday': 'Sreda',
+                'thursday': 'Četvrtak',
+                'friday': 'Petak',
+                'saturday': 'Subota',
+                'sunday': 'Nedelja',
+                'call': 'Poziv',
+                'email': 'Email',
+                'no-hair-salon-providers-yet': 'Još uvek nema frizerskih salona',
+                'no-hair-salon-providers-description': 'Trenutno nema frizerskih salona registrovanih na našoj platformi.',
+                'update-business-category-hair-beauty': 'Ažurirajte kategoriju vašeg biznisa na "Frizura i Lepota" da se pojavite ovde.',
+                'update-business-info': 'Ažuriraj Informacije o Biznisu',
+                'are-you-hair-salon-owner': 'Da li ste vlasnik frizerskog salona? Registrujte svoj biznis danas!',
+                'register-as-provider': 'Registruj se kao Pružalac',
+                'no-providers-found': 'Nisu pronađeni pružaoci',
+                'try-adjusting-search-criteria': 'Pokušajte da prilagodite kriterijume pretrage',
+                'back-to-all-services': 'Nazad na Sve Usluge',
+                'no-providers-yet': 'Još uvek nema pružaoca',
+                'no-providers-description': 'Trenutno nema pružaoca registrovanih na našoj platformi.',
+                'update-business-category': 'Ažurirajte kategoriju vašeg biznisa da se pojavite ovde.',
+                'register-your-business': 'Registrujte svoj biznis danas!',
+                'nail-salon-providers': 'Salon za Nokte Pružaoci',
+                'nail-salon-description': 'Manikura, pedikura, nail art i negovanje noktiju',
+                'search-nail-salon-providers': 'Pretražite salone za nokte...',
+                'clear': 'Obriši',
+                'back-to-services': 'Nazad na Usluge',
+                'eyebrow-providers': 'Obrve i Trepavice Pružaoci',
+                'eyebrow-description': 'Oblikovanje obrva, produžavanje trepavica i bojanje',
+                'search-eyebrow-providers': 'Pretražite pružaoce po imenu ili uslugama...',
+                'no-eyebrow-providers-yet': 'Još uvek nema obrve i trepavice pružaoca',
+                'no-eyebrow-providers-description': 'Trenutno nema pružaoca obrva i trepavica registrovanih na našoj platformi.',
+                'update-service-type-eyebrow': 'Ažurirajte tip vaše usluge na "Obrve i Trepavice" da se pojavite ovde.',
+                'are-you-eyebrow-specialist': 'Da li ste specijalista za obrve i trepavice? Registrujte svoj biznis danas!',
+                'massage-therapy-providers': 'Masaža Pružaoci',
+                'massage-therapy-description': 'Švedska, duboka masaža, masaža vrućim kamenjem i terapeutska masaža',
+                'search-massage-providers': 'Pretražite pružaoce masaže...',
+                'spa-treatment-providers': 'Spa Tretman Pružaoci',
+                'spa-treatment-description': 'Facialni tretmani, body wrap, piling i luksuzne spa usluge',
+                'search-spa-providers': 'Pretražite spa pružaoce...',
+                'aromatherapy-providers': 'Aromaterapija Pružaoci',
+                'aromatherapy-description': 'Tretmani eteričnim uljima i aromaterapija sesije',
+                'search-aromatherapy-providers': 'Pretražite pružaoce po imenu ili uslugama...',
+                'personal-training-providers': 'Lični Trening Pružaoci',
+                'personal-training-description': 'Individualni fitness trening i vežbanje sesije',
+                'search-training-providers': 'Pretražite lične trenere...',
+                'yoga-classes-providers': 'Joga Časovi Pružaoci',
+                'yoga-classes-description': 'Grupni i privatni joga časovi za sve nivoe',
+                'search-yoga-providers': 'Pretražite joga instruktore...',
+                'pilates-providers': 'Pilates Pružaoci',
+                'pilates-description': 'Pilates časovi i privatne sesije',
+                'search-pilates-providers': 'Pretražite pružaoce po imenu ili uslugama...',
+                'dermatology-providers': 'Dermatologija Pružaoci',
+                'dermatology-description': 'Kožne konsultacije, tretmani i kozmetički postupci',
+                'search-dermatology-providers': 'Pretražite pružaoce po imenu ili uslugama...',
+                'physical-therapy-providers': 'Fizikalna Terapija Pružaoci',
+                'physical-therapy-description': 'Rehabilitacija, oporavak od povreda i poboljšanje pokretljivosti',
+                'search-physical-therapy-providers': 'Pretražite pružaoce po imenu ili uslugama...',
+                'nutrition-providers': 'Savetovanje o Ishrani Pružaoci',
+                'nutrition-description': 'Planiranje ishrane, nutricionističko vođenje i wellness coaching',
+                'search-nutrition-providers': 'Pretražite pružaoce po imenu ili uslugama...',
+                'makeup-providers': 'Šminker Pružaoci',
+                'makeup-description': 'Profesionalno šminkanje za posebne događaje',
+                'search-makeup-providers': 'Pretražite pružaoce po imenu ili uslugama...',
+                'photography-providers': 'Fotografija Pružaoci',
+                'photography-description': 'Portret, događaji i lifestyle fotografija sesije',
+                'search-photography-providers': 'Pretražite pružaoce po imenu ili uslugama...',
+                'lifecoaching-providers': 'Life Coaching Pružaoci',
+                'lifecoaching-description': 'Lični razvoj i life guidance sesije',
+                'search-lifecoaching-providers': 'Pretražite pružaoce po imenu ili uslugama...',
+                'find-near-you': 'Pronađi Blizu Tebe',
+                'find-near-you-description': 'Otkrij pružaoce u vašoj lokalnoj oblasti',
+                'serbia-map': 'Mapa Srbije',
+                'find-providers': 'Pronađi Pružaoce',
+                'world-map': 'Mapa Sveta'
+            }
+        };
+
+        // Language Selection Functionality
+        function changeLanguage(langCode) {
+            const currentLangElement = document.getElementById('current-language');
+            const languageNames = {
+                'en': 'EN',
+                'sr': 'SR'
+            };
+            
+            currentLangElement.textContent = languageNames[langCode] || 'EN';
+            localStorage.setItem('language', langCode);
+            
+            // Apply translations
+            applyTranslations(langCode);
+        }
+
+        // Apply translations to the page
+        function applyTranslations(langCode) {
+            const langData = translations[langCode] || translations['en'];
+            
+            // Translate elements with data-translate attribute
+            const elementsToTranslate = document.querySelectorAll('[data-translate]');
+            elementsToTranslate.forEach(element => {
+                const key = element.getAttribute('data-translate');
+                if (langData[key]) {
+                    element.textContent = langData[key];
+                }
+            });
+            
+            // Translate placeholder attributes
+            const elementsWithPlaceholders = document.querySelectorAll('[data-translate-placeholder]');
+            elementsWithPlaceholders.forEach(element => {
+                const key = element.getAttribute('data-translate-placeholder');
+                if (langData[key]) {
+                    element.placeholder = langData[key];
+                }
+            });
+            
+            // Translate dates
+            translateDates(langCode);
+        }
+
+        // Translate dates on the page
+        function translateDates(langCode) {
+            const monthNames = {
+                'en': ['January', 'February', 'March', 'April', 'May', 'June', 
+                       'July', 'August', 'September', 'October', 'November', 'December'],
+                'sr': ['Januar', 'Februar', 'Mart', 'April', 'Maj', 'Jun', 
+                       'Jul', 'Avgust', 'Septembar', 'Oktobar', 'Novembar', 'Decembar']
+            };
+            
+            const targetMonths = monthNames[langCode] || monthNames['en'];
+            
+            // Find all elements that might contain dates
+            const dateElements = document.querySelectorAll('td, .text-muted, small');
+            
+            dateElements.forEach(element => {
+                let text = element.textContent;
+                let hasChanges = false;
+                
+                // Translate from English to target language
+                monthNames['en'].forEach((month, index) => {
+                    if (text.includes(month)) {
+                        text = text.replace(new RegExp(month, 'g'), targetMonths[index]);
+                        hasChanges = true;
+                    }
+                });
+                
+                // Translate from Serbian to target language
+                monthNames['sr'].forEach((month, index) => {
+                    if (text.includes(month)) {
+                        text = text.replace(new RegExp(month, 'g'), targetMonths[index]);
+                        hasChanges = true;
+                    }
+                });
+                
+                // Only update if changes were made
+                if (hasChanges) {
+                    element.textContent = text;
+                }
+            });
+        }
+        
+        // Load saved theme and language on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme');
+            const savedLanguage = localStorage.getItem('language');
+            const themeIcon = document.getElementById('theme-icon');
+            const currentLangElement = document.getElementById('current-language');
+            
+            // Load theme
+            if (savedTheme === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+                themeIcon.className = 'fas fa-sun';
+            } else {
+                document.body.setAttribute('data-theme', 'light');
+                themeIcon.className = 'fas fa-moon';
+            }
+            
+            // Load language
+            if (savedLanguage) {
+                const languageNames = {
+                    'en': 'EN',
+                    'sr': 'SR'
+                };
+                currentLangElement.textContent = languageNames[savedLanguage] || 'EN';
+                applyTranslations(savedLanguage);
+            }
+            
+            // Add event listeners for language options
+            const languageOptions = document.querySelectorAll('.language-option');
+            languageOptions.forEach(option => {
+                option.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const langCode = this.getAttribute('data-lang');
+                    changeLanguage(langCode);
+                });
+            });
+            
+            // Add fade-in animation to main content
+            const mainContent = document.querySelector('main');
+            if (mainContent) {
+                mainContent.classList.add('fade-in');
+            }
+        });
+    </script>
+</body>
+</html>

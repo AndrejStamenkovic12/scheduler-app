@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Appointment Scheduler{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="hero-section text-center py-5 mb-5 fade-in-up">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <h1 class="display-4 fw-bold mb-3 gradient-text">
+                    <i class="fas fa-calendar-check me-3"></i>
+                    <span data-translate="appointment-scheduler">Appointment Scheduler</span>
+                </h1>
+                <p class="lead mb-4" data-translate="welcome-subtitle">
+                    Transform your personal care routine with our modern appointment management system. 
+                    Schedule beauty, wellness, and fitness appointments effortlessly.
+                </p>
+                <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
+                    {% if current_user %}
+                        <a href="{{ url_for('schedule') }}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-plus me-2"></i><span data-translate="schedule-appointment">Schedule Appointment</span>
+                        </a>
+                        <a href="{{ url_for('appointments') }}" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-list me-2"></i><span data-translate="my-appointments">My Appointments</span>
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-user-plus me-2"></i><span data-translate="get-started">Get Started</span>
+                        </a>
+                        <a href="{{ url_for('login') }}" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-sign-in-alt me-2"></i><span data-translate="login">Login</span>
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Navigation Cards -->
+<div class="row g-4 mb-5">
+    <div class="col-lg-3 col-md-6">
+        <div class="card h-100 hover-card fade-in-up" style="animation-delay: 0.1s;">
+            <div class="card-body text-center p-4">
+                <div class="service-icon mb-3">
+                    <i class="fas fa-cut fa-3x" style="background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;"></i>
+                </div>
+                <h5 class="card-title" data-translate="services">Services</h5>
+                <p class="card-text" data-translate="services-description">Discover our premium beauty, wellness, and fitness services</p>
+                <a href="{{ url_for('services') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-right me-1"></i><span data-translate="explore-services">Explore Services</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="card h-100 hover-card fade-in-up" style="animation-delay: 0.2s;">
+            <div class="card-body text-center p-4">
+                <div class="service-icon mb-3 position-relative">
+                    <i class="fas fa-map-marker-alt fa-3x" style="background: var(--danger-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: pulse 2s infinite;"></i>
+                    <i class="fas fa-crosshairs fa-1x position-absolute" style="top: 15px; left: 20px; color: #ff6b6b; animation: rotate 3s linear infinite;"></i>
+                    <div class="position-absolute" style="top: 8px; right: 8px; width: 8px; height: 8px; background: #ff6b6b; border-radius: 50%; animation: blink 1.5s infinite;"></div>
+                </div>
+                <h5 class="card-title" data-translate="find-near-you">Find Near You</h5>
+                <p class="card-text" data-translate="find-near-you-description">Discover providers in your local area</p>
+                <a href="{{ url_for('find_near_you') }}" class="btn btn-outline-danger">
+                    <i class="fas fa-arrow-right me-1"></i><span data-translate="find-providers">Find Providers</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="card h-100 hover-card fade-in-up" style="animation-delay: 0.3s;">
+            <div class="card-body text-center p-4">
+                <div class="service-icon mb-3">
+                    <i class="fas fa-question-circle fa-3x" style="background: var(--success-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;"></i>
+                </div>
+                <h5 class="card-title" data-translate="help-support">Help & Support</h5>
+                <p class="card-text" data-translate="help-description">Get instant help with our AI assistant and FAQ</p>
+                <a href="{{ url_for('help') }}" class="btn btn-outline-success">
+                    <i class="fas fa-arrow-right me-1"></i><span data-translate="get-support">Get Support</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="card h-100 hover-card fade-in-up" style="animation-delay: 0.4s;">
+            <div class="card-body text-center p-4">
+                <div class="service-icon mb-3">
+                    <i class="fas fa-user-circle fa-3x" style="background: var(--info-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;"></i>
+                </div>
+                <h5 class="card-title" data-translate="profile">Profile</h5>
+                <p class="card-text" data-translate="profile-description">Manage your preferences and account settings</p>
+                <a href="{{ url_for('profile') }}" class="btn btn-outline-info">
+                    <i class="fas fa-arrow-right me-1"></i><span data-translate="view-profile">View Profile</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upcoming Appointments Section -->
+<div class="row">
+    <div class="col-12">
+        <div class="card fade-in-up" style="animation-delay: 0.5s;">
+            <div class="card-header glass-effect d-flex justify-content-between align-items-center">
+                <h4 class="mb-0 gradient-text">
+                    <i class="fas fa-calendar-alt me-2"></i>
+                    <span data-translate="upcoming-appointments">Upcoming Appointments</span>
+                </h4>
+                <a href="{{ url_for('appointments') }}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-eye me-1"></i><span data-translate="view-all">View All</span>
+                </a>
+            </div>
+            <div class="card-body">
+                {% if appointments %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th data-translate="appointment-type">Type</th>
+                                    <th data-translate="date">Date</th>
+                                    <th data-translate="time">Time</th>
+                                    <th data-translate="duration">Duration</th>
+                                    <th data-translate="notes">Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for apt in appointments %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-{{ 
+                                            'primary' if apt.type == 'Hair Salon' else
+                                            'success' if apt.type == 'Nail Salon' else
+                                            'info' if apt.type == 'Massage Therapy' else
+                                            'warning' if apt.type == 'Personal Training' else
+                                            'secondary' if apt.type == 'Spa Treatment' else
+                                            'dark'
+                                        }}">
+                                            {{ apt.type }}
+                                        </span>
+                                    </td>
+                                    <td>{{ apt.datetime.strftime('%Y-%m-%d') }}</td>
+                                    <td>{{ apt.datetime.strftime('%H:%M') }}</td>
+                                    <td>{{ apt.duration }} min</td>
+                                    <td>{{ apt.notes or '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <div class="mb-4">
+                            <i class="fas fa-calendar-plus fa-4x" style="background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;"></i>
+                        </div>
+                        {% if current_user %}
+                            <h5 class="mb-3" data-translate="ready-to-start">Ready to get started?</h5>
+                            <a href="{{ url_for('schedule') }}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-plus me-2"></i><span data-translate="schedule-first-appointment-btn">Schedule Your First Appointment</span>
+                            </a>
+                        {% else %}
+                            <h5 class="mb-3" data-translate="welcome">Welcome!</h5>
+                            <p class="text-muted mb-4" data-translate="create-account-message">Create an account to start booking appointments.</p>
+                            <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-user-plus me-2"></i><span data-translate="create-account">Create Account</span>
+                            </a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Coming Soon Modal -->
+<div class="modal fade" id="comingSoonModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-tools me-2"></i>
+                    Coming Soon
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <i class="fas fa-hammer fa-4x text-warning mb-3"></i>
+                <h5 id="featureName">Feature</h5>
+                <p class="text-muted">This feature is currently under development and will be available soon!</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

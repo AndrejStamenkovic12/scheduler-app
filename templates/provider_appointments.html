@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block title %}Appointment Management - Appointment Scheduler{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-calendar-check me-2"></i>
+                    Appointment Management
+                </h4>
+            </div>
+            <div class="card-body">
+                <!-- Pending Appointments -->
+                {% if pending_appointments %}
+                <div class="mb-5">
+                    <h5 class="mb-3 text-warning">
+                        <i class="fas fa-clock me-2"></i>
+                        Pending Requests ({{ pending_appointments|length }})
+                    </h5>
+                    <div class="row g-3">
+                        {% for apt in pending_appointments %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card border-warning">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="card-title mb-0">{{ apt.customer_name }}</h6>
+                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    </div>
+                                    
+                                    <div class="mb-2">
+                                        <strong>{{ apt.type }}</strong>
+                                    </div>
+                                    
+                                    <div class="mb-2">
+                                        <i class="fas fa-calendar me-1"></i>
+                                        {{ apt.datetime.strftime('%B %d, %Y') }}
+                                    </div>
+                                    
+                                    <div class="mb-2">
+                                        <i class="fas fa-clock me-1"></i>
+                                        {{ apt.datetime.strftime('%I:%M %p') }} ({{ apt.duration }} min)
+                                    </div>
+                                    
+                                    {% if apt.notes %}
+                                    <div class="mb-3">
+                                        <small class="text-muted">
+                                            <strong>Notes:</strong> {{ apt.notes }}
+                                        </small>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if apt.customer_phone %}
+                                    <div class="mb-2">
+                                        <i class="fas fa-phone me-1"></i>
+                                        <a href="tel:{{ apt.customer_phone }}">{{ apt.customer_phone }}</a>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if apt.customer_email %}
+                                    <div class="mb-3">
+                                        <i class="fas fa-envelope me-1"></i>
+                                        <a href="mailto:{{ apt.customer_email }}">{{ apt.customer_email }}</a>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <div class="d-grid gap-2">
+                                        <button class="btn btn-success btn-sm" onclick="confirmAppointment({{ apt.id }})">
+                                            <i class="fas fa-check me-1"></i>Confirm
+                                        </button>
+                                        <button class="btn btn-danger btn-sm" onclick="declineAppointment({{ apt.id }})">
+                                            <i class="fas fa-times me-1"></i>Decline
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Confirmed Appointments -->
+                {% if confirmed_appointments %}
+                <div class="mb-5">
+                    <h5 class="mb-3 text-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Confirmed Appointments ({{ confirmed_appointments|length }})
+                    </h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Customer</th>
+                                    <th>Service</th>
+                                    <th>Date & Time</th>
+                                    <th>Duration</th>
+                                    <th>Contact</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for apt in confirmed_appointments %}
+                                <tr>
+                                    <td>{{ apt.customer_name }}</td>
+                                    <td>{{ apt.type }}</td>
+                                    <td>
+                                        {{ apt.datetime.strftime('%B %d, %Y') }}<br>
+                                        <small class="text-muted">{{ apt.datetime.strftime('%I:%M %p') }}</small>
+                                    </td>
+                                    <td>{{ apt.duration }} min</td>
+                                    <td>
+                                        {% if apt.customer_phone %}
+                                            <a href="tel:{{ apt.customer_phone }}">{{ apt.customer_phone }}</a><br>
+                                        {% endif %}
+                                        {% if apt.customer_email %}
+                                            <a href="mailto:{{ apt.customer_email }}">{{ apt.customer_email }}</a>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if apt.datetime <= now %}
+                                            <button class="btn btn-primary btn-sm" onclick="completeAppointment({{ apt.id }})">
+                                                <i class="fas fa-check me-1"></i>Complete
+                                            </button>
+                                        {% else %}
+                                            <small class="text-muted">Upcoming</small>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Completed Appointments -->
+                {% if completed_appointments %}
+                <div class="mb-4">
+                    <h5 class="mb-3 text-info">
+                        <i class="fas fa-history me-2"></i>
+                        Completed Appointments ({{ completed_appointments|length }})
+                    </h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Customer</th>
+                                    <th>Service</th>
+                                    <th>Date & Time</th>
+                                    <th>Duration</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for apt in completed_appointments %}
+                                <tr>
+                                    <td>{{ apt.customer_name }}</td>
+                                    <td>{{ apt.type }}</td>
+                                    <td>
+                                        {{ apt.datetime.strftime('%B %d, %Y') }}<br>
+                                        <small class="text-muted">{{ apt.datetime.strftime('%I:%M %p') }}</small>
+                                    </td>
+                                    <td>{{ apt.duration }} min</td>
+                                    <td>
+                                        <a href="{{ url_for('review_appointment', appointment_id=apt.id) }}" 
+                                           class="btn btn-outline-warning btn-sm"
+                                           title="Review Customer">
+                                            <i class="fas fa-star"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- No Appointments Message -->
+                {% if not pending_appointments and not confirmed_appointments and not completed_appointments %}
+                <div class="text-center py-5">
+                    <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
+                    <h5 class="text-muted">No appointments yet</h5>
+                    <p class="text-muted">Appointment requests from customers will appear here.</p>
+                </div>
+                {% endif %}
+
+                <!-- Navigation -->
+                <div class="mt-4">
+                    <a href="{{ url_for('profile') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>
+                        Back to Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmAppointment(appointmentId) {
+    if (confirm('Are you sure you want to confirm this appointment?')) {
+        fetch(`/appointment/${appointmentId}/confirm`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error confirming appointment: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error confirming appointment. Please try again.');
+        });
+    }
+}
+
+function declineAppointment(appointmentId) {
+    if (confirm('Are you sure you want to decline this appointment?')) {
+        fetch(`/appointment/${appointmentId}/decline`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error declining appointment: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error declining appointment. Please try again.');
+        });
+    }
+}
+
+function completeAppointment(appointmentId) {
+    if (confirm('Mark this appointment as completed?')) {
+        fetch(`/appointment/${appointmentId}/complete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error completing appointment: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error completing appointment. Please try again.');
+        });
+    }
+}
+</script>
+{% endblock %}

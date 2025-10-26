@@ -1,0 +1,17 @@
+[
+  {
+    "id": 2,
+    "type": "aromatherapy",
+    "datetime": "2025-10-25 21:15:00",
+    "duration": 60,
+    "notes": "",
+    "created_at": "2025-10-25 20:15:21.549330",
+    "user_id": 2,
+    "provider_id": 1,
+    "status": "completed",
+    "customer_name": "Andrej Stamenkovic",
+    "customer_phone": "+381692903202",
+    "customer_email": "stamenkovicandrej12@gmail.com",
+    "completed_at": "2025-10-26T20:04:33.758804"
+  }
+]

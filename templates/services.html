@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}Services - Appointment Scheduler{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="hero-section text-center py-4 mb-4">
+    <div class="container">
+        <h1 class="display-5 fw-bold text-primary mb-3">
+            <i class="fas fa-concierge-bell me-3"></i>
+            <span data-translate="our-services">Our Services</span>
+        </h1>
+        <p class="lead text-muted mb-4" data-translate="services-hero-description">
+            Discover a wide range of professional services from trusted providers. Book appointments for hair, beauty, wellness, fitness, and more.
+        </p>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" class="form-control" id="serviceSearch" 
+                                   placeholder="Search services or providers..." data-translate-placeholder="search-services-providers">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" id="categoryFilter">
+                            <option value="" data-translate="all-categories">All Categories</option>
+                            <option value="Hair & Beauty" data-translate="hair-beauty">Hair & Beauty</option>
+                            <option value="Wellness & Spa" data-translate="wellness-spa">Wellness & Spa</option>
+                            <option value="Fitness & Training" data-translate="fitness-training">Fitness & Training</option>
+                            <option value="Health & Medical" data-translate="health-medical">Health & Medical</option>
+                            <option value="Specialty Services" data-translate="specialty-services">Specialty Services</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" id="priceFilter">
+                            <option value="" data-translate="all-price-ranges">All Price Ranges</option>
+                            <option value="0-50" data-translate="under-50">Under $50</option>
+                            <option value="50-100" data-translate="price-50-100">$50 - $100</option>
+                            <option value="100-200" data-translate="price-100-200">$100 - $200</option>
+                            <option value="200+" data-translate="price-200-plus">$200+</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Services by Category -->
+{% for category in services %}
+<div class="service-category mb-5">
+    <div class="category-header mb-4">
+        <h3 class="text-{{ category.color }}">
+            <i class="{{ category.icon }} me-2"></i>
+            {{ category.category }}
+        </h3>
+        <p class="text-muted">{{ category.description }}</p>
+    </div>
+    
+    <div class="row g-4">
+        {% for service in category.services %}
+        <div class="col-lg-4 col-md-6 service-card" 
+             data-category="{{ category.category }}" 
+             data-price="{{ service.price_range }}" 
+             data-name="{{ service.name|lower }}">
+            <div class="card h-100 shadow-sm hover-card">
+                <div class="card-header bg-{{ category.color }} text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0" data-translate="service-{{ service.name|lower|replace(' ', '-')|replace('&', 'and') }}">{{ service.name }}</h5>
+                        {% if service.popular %}
+                        <span class="badge bg-warning text-dark">
+                            <i class="fas fa-star me-1"></i><span data-translate="popular">Popular</span>
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">{{ service.description }}</p>
+                    
+                    <div class="service-details mb-3">
+                        <div class="detail-item mb-2">
+                            <i class="fas fa-clock text-muted me-2"></i>
+                            <strong data-translate="duration">Duration:</strong> {{ service.duration }}
+                        </div>
+                        <div class="detail-item mb-2">
+                            <i class="fas fa-dollar-sign text-muted me-2"></i>
+                            <strong data-translate="price">Price:</strong> {{ service.price_range }}
+                        </div>
+                        <div class="detail-item mb-3">
+                            <i class="fas fa-building text-muted me-2"></i>
+                            <strong data-translate="providers">Providers:</strong> {{ service.provider_details|length }} <span data-translate="available">available</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-light">
+                    <div class="d-grid gap-2">
+                        {% if service.name == 'Hair Salon' %}
+                            <a href="{{ url_for('hair_providers') }}" class="btn btn-outline-{{ category.color }} btn-sm">
+                                <i class="fas fa-eye me-1"></i><span data-translate="view-providers"><span data-translate="view-providers">View Providers</span></span>
+                            </a>
+                        {% elif service.name == 'Nail Salon' %}
+                            <a href="{{ url_for('nail_providers') }}" class="btn btn-outline-{{ category.color }} btn-sm">
+                                <i class="fas fa-eye me-1"></i><span data-translate="view-providers">View Providers</span>
+                            </a>
+                        {% elif service.name == 'Eyebrow & Eyelash' %}
+                            <a href="{{ url_for('eyebrow_providers') }}" class="btn btn-outline-{{ category.color }} btn-sm">
+                                <i class="fas fa-eye me-1"></i><span data-translate="view-providers">View Providers</span>
+                            </a>
+                        {% elif service.name == 'Massage Therapy' %}
+                            <a href="{{ url_for('massage_providers') }}" class="btn btn-outline-{{ category.color }} btn-sm">
+                                <i class="fas fa-eye me-1"></i><span data-translate="view-providers">View Providers</span>
+                            </a>
+                        {% elif service.name == 'Spa Treatment' %}
+                            <a href="{{ url_for('spa_providers') }}" class="btn btn-outline-{{ category.color }} btn-sm">
+                                <i class="fas fa-eye me-1"></i><span data-translate="view-providers">View Providers</span>
+                            </a>
+                        {% elif service.name == 'Aromatherapy' %}
+                            <a href="{{ url_for('aromatherapy_providers') }}" class="btn btn-outline-{{ category.color }} btn-sm">
+                                <i class="fas fa-eye me-1"></i><span data-translate="view-providers">View Providers</span>
+                            </a>
+                        {% elif service.name == 'Personal Training' %}
+                            <a href="{{ url_for('training_providers') }}" class="btn btn-outline-{{ category.color }} btn-sm">
+                                <i class="fas fa-eye me-1"></i><span data-translate="view-providers">View Providers</span>
+                            </a>
+                        {% elif service.name == 'Yoga Classes' %}
+                            <a href="{{ url_for('yoga_providers') }}" class="btn btn-outline-{{ category.color }} btn-sm">
+                                <i class="fas fa-eye me-1"></i><span data-translate="view-providers">View Providers</span>
+                            </a>
+                        {% elif service.name == 'Pilates' %}
+                            <a href="{{ url_for('pilates_providers') }}" class="btn btn-outline-{{ category.color }} btn-sm">
+                                <i class="fas fa-eye me-1"></i><span data-translate="view-providers">View Providers</span>
+                            </a>
+                        {% elif service.name == 'Dermatology' %}
+                            <a href="{{ url_for('dermatology_providers') }}" class="btn btn-outline-{{ category.color }} btn-sm">
+                                <i class="fas fa-eye me-1"></i><span data-translate="view-providers">View Providers</span>
+                            </a>
+                        {% elif service.name == 'Physical Therapy' %}
+                            <a href="{{ url_for('physical_therapy_providers') }}" class="btn btn-outline-{{ category.color }} btn-sm">
+                                <i class="fas fa-eye me-1"></i><span data-translate="view-providers">View Providers</span>
+                            </a>
+                        {% elif service.name == 'Nutrition Counseling' %}
+                            <a href="{{ url_for('nutrition_providers') }}" class="btn btn-outline-{{ category.color }} btn-sm">
+                                <i class="fas fa-eye me-1"></i><span data-translate="view-providers">View Providers</span>
+                            </a>
+                        {% elif service.name == 'Makeup Artist' %}
+                            <a href="{{ url_for('makeup_providers') }}" class="btn btn-outline-{{ category.color }} btn-sm">
+                                <i class="fas fa-eye me-1"></i><span data-translate="view-providers">View Providers</span>
+                            </a>
+                        {% elif service.name == 'Photography' %}
+                            <a href="{{ url_for('photography_providers') }}" class="btn btn-outline-{{ category.color }} btn-sm">
+                                <i class="fas fa-eye me-1"></i><span data-translate="view-providers">View Providers</span>
+                            </a>
+                        {% elif service.name == 'Life Coaching' %}
+                            <a href="{{ url_for('lifecoaching_providers') }}" class="btn btn-outline-{{ category.color }} btn-sm">
+                                <i class="fas fa-eye me-1"></i><span data-translate="view-providers">View Providers</span>
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
+
+<!-- No Results Message -->
+<div id="noResults" class="text-center py-5" style="display: none;">
+    <i class="fas fa-search fa-4x text-muted mb-3"></i>
+    <h5 class="text-muted" data-translate="no-services-found">No services found</h5>
+    <p class="text-muted" data-translate="adjust-search-criteria">Try adjusting your search criteria or browse all categories.</p>
+    <button class="btn btn-primary" onclick="clearFilters()">
+        <i class="fas fa-refresh me-1"></i><span data-translate="clear-filters">Clear Filters</span>
+    </button>
+</div>
+
+<!-- <span data-translate="view-providers">View Providers</span> Modal -->
+<div class="modal fade" id="providersModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-building me-2"></i>
+                    <span id="modalServiceName">Service</span> - <span data-translate="available-providers">Available Providers</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="providersList" class="row g-3">
+                    <!-- Providers will be populated by JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-translate="close">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Book Service Modal -->
+<div class="modal fade" id="bookServiceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-calendar-plus me-2"></i>
+                    <span data-translate="book">Book</span> <span id="bookServiceName">Service</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <span data-translate="booking-redirect-message">This will redirect you to the appointment scheduling page with the service pre-selected.</span>
+                </div>
+                <p data-translate="booking-next-page-info">You'll be able to choose your preferred provider and time slot on the next page.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-translate="cancel">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="proceedToBooking()" data-translate="continue-to-booking">Continue to Booking</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
